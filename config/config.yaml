@@ -1,0 +1,15 @@
+model:
+  path: models/xgboost_ids.pkl
+  preprocessor_path: models/preprocessor.pkl
+  
+detection:
+  confidence_threshold: 0.70
+  batch_size: 100
+  
+alerts:
+  enabled: true
+  cooldown_minutes: 15
+  
+dashboard:
+  refresh_interval: 5
+  max_rows: 1000
