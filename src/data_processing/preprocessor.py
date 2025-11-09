@@ -1,215 +1,211 @@
+# -*- coding: utf-8 -*-
 """
-Data Preprocessing Module
-Loads, cleans, and prepares NSL-KDD dataset for training
+Data Preprocessor for AI-Powered IDS
+Handles encoding, scaling, and transformation of features.
 """
 
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import LabelEncoder
-import os
-import json
+import joblib
 import logging
+from pathlib import Path
+from typing import Tuple, Optional
+from sklearn.preprocessing import LabelEncoder, StandardScaler, MinMaxScaler
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from config import Config, CONFIG
 
-# Setup logging
-logging.basicConfig(
-    filename='logs/app.log',
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
 logger = logging.getLogger(__name__)
 
-class DataPreprocessor:
-    """Handles data loading, cleaning, and preprocessing"""
-    
+
+class IDSPreprocessor:
+    """Preprocesses data for IDS model"""
+
     def __init__(self):
-        self.attack_mapping = self._create_attack_mapping()
-        self.label_encoder = LabelEncoder()
-        
-    def _create_attack_mapping(self):
-        """Map specific attacks to general categories"""
-        return {
-            # DoS Attacks
-            'back': 'DoS', 'land': 'DoS', 'neptune': 'DoS', 'pod': 'DoS',
-            'smurf': 'DoS', 'teardrop': 'DoS', 'apache2': 'DoS', 'udpstorm': 'DoS',
-            'processtable': 'DoS', 'mailbomb': 'DoS',
-            
-            # Probe Attacks  
-            'ipsweep': 'Probe', 'nmap': 'Probe', 'portsweep': 'Probe',
-            'satan': 'Probe', 'mscan': 'Probe', 'saint': 'Probe',
-            
-            # R2L (Remote to Local) Attacks
-            'ftp_write': 'R2L', 'guess_passwd': 'R2L', 'imap': 'R2L',
-            'multihop': 'R2L', 'phf': 'R2L', 'spy': 'R2L', 'warezclient': 'R2L',
-            'warezmaster': 'R2L', 'sendmail': 'R2L', 'named': 'R2L',
-            'snmpgetattack': 'R2L', 'snmpguess': 'R2L', 'xlock': 'R2L',
-            'xsnoop': 'R2L', 'worm': 'R2L',
-            
-            # U2R (User to Root) Attacks
-            'buffer_overflow': 'U2R', 'loadmodule': 'U2R', 'perl': 'U2R',
-            'rootkit': 'U2R', 'httptunnel': 'U2R', 'ps': 'U2R', 
-            'sqlattack': 'U2R', 'xterm': 'U2R',
-            
-            # Normal Traffic
-            'normal': 'Normal'
-        }
-    
-    def load_nsl_kdd(self, train_path='data/raw/KDDTrain+.txt', 
-                     test_path='data/raw/KDDTest+.txt'):
+        self.config = CONFIG
+        self.label_encoders = {}
+        self.feature_scaler = None
+        self.label_encoder = None
+        self.feature_columns = None
+        self.categorical_columns = None
+        self.numerical_columns = None
+        self.is_fitted = False
+
+    def fit(self, X: pd.DataFrame, y: pd.Series = None):
         """
-        Load NSL-KDD dataset
-        
+        Fit preprocessor on training data
+
         Args:
-            train_path: Path to training data
-            test_path: Path to test data
-            
-        Returns:
-            df_train, df_test: Pandas DataFrames
+            X: Feature dataframe
+            y: Target labels (optional)
         """
-        logger.info("Loading NSL-KDD datasets...")
-        
-        # Define column names
-        column_names = [
-            'duration', 'protocol_type', 'service', 'flag', 'src_bytes',
-            'dst_bytes', 'land', 'wrong_fragment', 'urgent', 'hot',
-            'num_failed_logins', 'logged_in', 'num_compromised', 'root_shell',
-            'su_attempted', 'num_root', 'num_file_creations', 'num_shells',
-            'num_access_files', 'num_outbound_cmds', 'is_host_login',
-            'is_guest_login', 'count', 'srv_count', 'serror_rate',
-            'srv_serror_rate', 'rerror_rate', 'srv_rerror_rate', 'same_srv_rate',
-            'diff_srv_rate', 'srv_diff_host_rate', 'dst_host_count',
-            'dst_host_srv_count', 'dst_host_same_srv_rate',
-            'dst_host_diff_srv_rate', 'dst_host_same_src_port_rate',
-            'dst_host_srv_diff_host_rate', 'dst_host_serror_rate',
-            'dst_host_srv_serror_rate', 'dst_host_rerror_rate',
-            'dst_host_srv_rerror_rate', 'label', 'difficulty'
-        ]
-        
+        logger.info("Fitting preprocessor...")
+
+        self.feature_columns = list(X.columns)
+
+        # Identify categorical and numerical columns
+        self.categorical_columns = [col for col in X.columns if X[col].dtype == 'object']
+        self.numerical_columns = [col for col in X.columns if col not in self.categorical_columns]
+
+        logger.info(f"Categorical columns: {len(self.categorical_columns)}")
+        logger.info(f"Numerical columns: {len(self.numerical_columns)}")
+
+        # Encode categorical features
+        for col in self.categorical_columns:
+            le = LabelEncoder()
+            # Fit on all unique values including NaN
+            unique_values = X[col].unique()
+            le.fit(unique_values)
+            self.label_encoders[col] = le
+
+        # Fit scaler on numerical features
+        if self.numerical_columns:
+            self.feature_scaler = StandardScaler()
+            # Create a copy with encoded categoricals
+            X_encoded = self._encode_features(X)
+            self.feature_scaler.fit(X_encoded[self.numerical_columns])
+
+        # Fit label encoder for target
+        if y is not None:
+            self.label_encoder = LabelEncoder()
+            self.label_encoder.fit(y)
+            logger.info(f"Classes: {self.label_encoder.classes_}")
+
+        self.is_fitted = True
+        logger.info("Preprocessor fitted successfully")
+
+    def transform(self, X: pd.DataFrame, y: pd.Series = None) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        """
+        Transform data
+
+        Args:
+            X: Feature dataframe
+            y: Target labels (optional)
+
+        Returns:
+            Tuple of (transformed_X, transformed_y)
+        """
+        if not self.is_fitted:
+            raise ValueError("Preprocessor must be fitted before transform")
+
+        # Encode categorical features
+        X_encoded = self._encode_features(X)
+
+        # Scale numerical features
+        if self.feature_scaler and self.numerical_columns:
+            X_encoded[self.numerical_columns] = self.feature_scaler.transform(X_encoded[self.numerical_columns])
+
+        # Transform labels
+        y_encoded = None
+        if y is not None and self.label_encoder:
+            y_encoded = self.label_encoder.transform(y)
+
+        return X_encoded.values, y_encoded
+
+    def fit_transform(self, X: pd.DataFrame, y: pd.Series = None) -> Tuple[np.ndarray, Optional[np.ndarray]]:
+        """Fit and transform in one step"""
+        self.fit(X, y)
+        return self.transform(X, y)
+
+    def _encode_features(self, X: pd.DataFrame) -> pd.DataFrame:
+        """Encode categorical features"""
+        X_encoded = X.copy()
+
+        for col in self.categorical_columns:
+            if col in X_encoded.columns:
+                try:
+                    X_encoded[col] = self.label_encoders[col].transform(X_encoded[col])
+                except ValueError as e:
+                    # Handle unseen categories
+                    logger.warning(f"Unseen categories in {col}, using default encoding")
+                    # Encode unknown values as -1
+                    def safe_transform(val):
+                        try:
+                            return self.label_encoders[col].transform([val])[0]
+                        except:
+                            return -1
+                    X_encoded[col] = X_encoded[col].apply(safe_transform)
+
+        return X_encoded
+
+    def inverse_transform_labels(self, y_encoded: np.ndarray) -> np.ndarray:
+        """Convert encoded labels back to original"""
+        if self.label_encoder:
+            return self.label_encoder.inverse_transform(y_encoded)
+        return y_encoded
+
+    def get_label_mapping(self) -> dict:
+        """Get mapping of label names to encoded values"""
+        if self.label_encoder:
+            return {label: idx for idx, label in enumerate(self.label_encoder.classes_)}
+        return {}
+
+    def save(self, path: str = None):
+        """Save preprocessor to disk"""
+        path = path or Config.PREPROCESSOR_PATH
+
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+
+        joblib.dump({
+            'label_encoders': self.label_encoders,
+            'feature_scaler': self.feature_scaler,
+            'label_encoder': self.label_encoder,
+            'feature_columns': self.feature_columns,
+            'categorical_columns': self.categorical_columns,
+            'numerical_columns': self.numerical_columns,
+            'is_fitted': self.is_fitted
+        }, path)
+
+        logger.info(f"Preprocessor saved to {path}")
+
+    def load(self, path: str = None):
+        """Load preprocessor from disk"""
+        path = path or Config.PREPROCESSOR_PATH
+
+        if not Path(path).exists():
+            raise FileNotFoundError(f"Preprocessor not found at {path}")
+
+        data = joblib.load(path)
+
+        self.label_encoders = data['label_encoders']
+        self.feature_scaler = data['feature_scaler']
+        self.label_encoder = data['label_encoder']
+        self.feature_columns = data['feature_columns']
+        self.categorical_columns = data['categorical_columns']
+        self.numerical_columns = data['numerical_columns']
+        self.is_fitted = data['is_fitted']
+
+        logger.info(f"Preprocessor loaded from {path}")
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
+    # Test preprocessor
+    from src.data_processing.data_loader import DataLoader
+
+    loader = DataLoader()
+
+    try:
         # Load data
-        df_train = pd.read_csv(train_path, names=column_names)
-        df_test = pd.read_csv(test_path, names=column_names)
-        
-        logger.info(f"Train samples: {len(df_train)}")
-        logger.info(f"Test samples: {len(df_test)}")
-        
-        return df_train, df_test
-    
-    def map_attack_categories(self, df):
-        """Map specific attacks to general categories"""
-        df['attack_category'] = df['label'].map(self.attack_mapping)
-        
-        # Handle unmapped attacks (if any)
-        unmapped = df['attack_category'].isnull().sum()
-        if unmapped > 0:
-            logger.warning(f"Found {unmapped} unmapped attack types")
-            # Set unmapped to their original label
-            df.loc[df['attack_category'].isnull(), 'attack_category'] = df['label']
-        
-        return df
-    
-    def clean_data(self, df):
-        """Clean dataset"""
-        logger.info("Cleaning data...")
-        
-        # Remove duplicates
-        before = len(df)
-        df = df.drop_duplicates()
-        removed = before - len(df)
-        if removed > 0:
-            logger.info(f"Removed {removed} duplicate rows")
-        
-        # Check missing values
-        missing = df.isnull().sum().sum()
-        if missing > 0:
-            logger.warning(f"Found {missing} missing values, filling with 0")
-            df = df.fillna(0)
-        
-        # Replace infinity (just in case)
-        df = df.replace([np.inf, -np.inf], np.nan)
-        df = df.fillna(0)
-        
-        # Drop difficulty column (not needed for training)
-        if 'difficulty' in df.columns:
-            df = df.drop('difficulty', axis=1)
-        
-        return df
-    
-    def save_processed_data(self, df_train, df_test, output_dir='data/processed'):
-        """Save preprocessed datasets"""
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Save CSVs
-        train_path = os.path.join(output_dir, 'train_processed.csv')
-        test_path = os.path.join(output_dir, 'test_processed.csv')
-        
-        df_train.to_csv(train_path, index=False)
-        df_test.to_csv(test_path, index=False)
-        
-        logger.info(f"Saved train data: {train_path}")
-        logger.info(f"Saved test data: {test_path}")
-        
-        # Save metadata
-        feature_names = [col for col in df_train.columns 
-                        if col not in ['label', 'attack_category']]
-        
-        categorical_features = df_train.select_dtypes(include=['object']).columns.tolist()
-        if 'label' in categorical_features:
-            categorical_features.remove('label')
-        if 'attack_category' in categorical_features:
-            categorical_features.remove('attack_category')
-        
-        numerical_features = df_train.select_dtypes(include=[np.number]).columns.tolist()
-        
-        metadata = {
-            'feature_names': feature_names,
-            'categorical_features': categorical_features,
-            'numerical_features': numerical_features,
-            'attack_categories': sorted(df_train['attack_category'].unique().tolist()),
-            'total_features': len(feature_names),
-            'train_samples': len(df_train),
-            'test_samples': len(df_test)
-        }
-        
-        metadata_path = os.path.join(output_dir, 'metadata.json')
-        with open(metadata_path, 'w') as f:
-            json.dump(metadata, f, indent=2)
-        
-        logger.info(f"Saved metadata: {metadata_path}")
-        
-        # Print summary
-        print("\n" + "=" * 60)
-        print("PREPROCESSING SUMMARY")
-        print("=" * 60)
-        print(f"✓ Train samples: {len(df_train):,}")
-        print(f"✓ Test samples: {len(df_test):,}")
-        print(f"✓ Features: {len(feature_names)}")
-        print(f"✓ Attack categories: {len(metadata['attack_categories'])}")
-        print(f"  → {', '.join(metadata['attack_categories'])}")
-        print(f"\n✓ Saved to: {output_dir}/")
-        print("=" * 60)
+        train_df = loader.load_nsl_kdd(train=True)
+        X, y = loader.prepare_for_training(train_df)
 
-def main():
-    """Main preprocessing pipeline"""
-    print("Starting data preprocessing...")
-    
-    # Initialize preprocessor
-    preprocessor = DataPreprocessor()
-    
-    # Load data
-    df_train, df_test = preprocessor.load_nsl_kdd()
-    
-    # Map attack categories
-    df_train = preprocessor.map_attack_categories(df_train)
-    df_test = preprocessor.map_attack_categories(df_test)
-    
-    # Clean data
-    df_train = preprocessor.clean_data(df_train)
-    df_test = preprocessor.clean_data(df_test)
-    
-    # Save processed data
-    preprocessor.save_processed_data(df_train, df_test)
-    
-    print("\n✅ Preprocessing complete!")
-    
+        # Take a small sample for testing
+        X_sample = X.head(1000)
+        y_sample = y.head(1000)
 
-if __name__ == '__main__':
-    main()
+        # Create and fit preprocessor
+        preprocessor = IDSPreprocessor()
+        X_transformed, y_transformed = preprocessor.fit_transform(X_sample, y_sample)
+
+        print(f"\nOriginal shape: {X_sample.shape}")
+        print(f"Transformed shape: {X_transformed.shape}")
+        print(f"\nLabel mapping: {preprocessor.get_label_mapping()}")
+
+        # Save preprocessor
+        preprocessor.save()
+        print("\nPreprocessor saved successfully")
+
+    except FileNotFoundError:
+        print("NSL-KDD dataset not found. Please download it first.")
