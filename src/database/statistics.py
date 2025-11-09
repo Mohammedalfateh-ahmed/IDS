@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Database Statistics for AI-Powered IDS
 Handles querying and analyzing attack statistics.

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 VPN/Proxy Detection Module
 Detects if an IP address is likely using a VPN or proxy.

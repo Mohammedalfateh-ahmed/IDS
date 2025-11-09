@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Model Predictor for AI-Powered IDS
 Makes predictions on new network traffic data.

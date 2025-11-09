@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 IP Enrichment Module
 Enriches IP addresses with geolocation and organization data.

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Security Recommendations Rule Engine
 Generates actionable security recommendations based on detected attacks.
@@ -37,7 +38,7 @@ class RecommendationEngine:
         # High-confidence attack recommendations
         if confidence > 0.8:
             recommendations.append(
-                f"⚠️  HIGH CONFIDENCE ATTACK: Immediate action recommended"
+                f"[WARNING]  HIGH CONFIDENCE ATTACK: Immediate action recommended"
             )
 
         # IP-based recommendations
@@ -97,7 +98,7 @@ class RecommendationEngine:
     def _get_u2r_recommendations(self, attack_data: Dict) -> List[str]:
         """Recommendations for U2R attacks"""
         return [
-            "🚨 CRITICAL: Conduct immediate security audit",
+            "[ALERT] CRITICAL: Conduct immediate security audit",
             "Check for unauthorized privilege escalation",
             "Review system logs for suspicious activity",
             "Patch all system vulnerabilities immediately",
@@ -113,7 +114,7 @@ class RecommendationEngine:
 
         if port in high_risk_ports:
             recs.append(
-                f"⚠️  Port {port} is high-risk - close if not required"
+                f"[WARNING]  Port {port} is high-risk - close if not required"
             )
 
         if port in harden_ports:

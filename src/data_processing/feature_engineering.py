@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Feature Engineering for AI-Powered IDS
 Creates and transforms features for ML model.

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Database Logger for AI-Powered IDS
 Handles logging of attacks, events, and statistics to the database.

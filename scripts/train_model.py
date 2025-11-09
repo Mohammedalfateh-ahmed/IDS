@@ -36,14 +36,14 @@ def main():
         trainer, metrics = train_full_pipeline()
 
         print("\n" + "=" * 60)
-        print("✅ MODEL TRAINING COMPLETED SUCCESSFULLY!")
+        print("[SUCCESS] MODEL TRAINING COMPLETED SUCCESSFULLY!")
         print("=" * 60)
         print(f"\nAccuracy: {metrics['accuracy']:.4f}")
         print(f"F1-Score: {metrics['f1_score']:.4f}")
         print("\nModel saved and ready for deployment!")
 
     except FileNotFoundError as e:
-        print("\n❌ Error: NSL-KDD dataset not found!")
+        print("\n[FAIL] Error: NSL-KDD dataset not found!")
         print("\nTo download the dataset:")
         print("1. Visit: https://www.unb.ca/cic/datasets/nsl.html")
         print("2. Download KDDTrain+.txt and KDDTest+.txt")
@@ -51,7 +51,7 @@ def main():
         sys.exit(1)
 
     except Exception as e:
-        print(f"\n❌ Training failed: {e}")
+        print(f"\n[FAIL] Training failed: {e}")
         logging.error(f"Training failed", exc_info=True)
         sys.exit(1)
 

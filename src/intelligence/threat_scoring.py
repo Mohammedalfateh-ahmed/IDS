@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Threat Scoring Module
 Calculates comprehensive threat scores for attacks.

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Data Preprocessor for AI-Powered IDS
 Handles encoding, scaling, and transformation of features.

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Database Schema for AI-Powered IDS
 This module defines the SQLite database schema for storing attack logs,
@@ -383,7 +384,7 @@ class DatabaseSchema:
 
     def reset_database(self):
         """Reset database (drop and recreate tables)"""
-        logger.warning("   Resetting database - all data will be lost!")
+        logger.warning("[OK]  Resetting database - all data will be lost!")
         self.drop_tables()
         self.create_tables()
         logger.info(" Database reset complete")
@@ -445,7 +446,7 @@ if __name__ == "__main__":
     schema = initialize_database()
 
     # Display table information
-    print("\n=Ê Database Information:")
+    print("\n=[OK] Database Information:")
     table_info = schema.get_table_info()
 
     for table_name, info in table_info.items():

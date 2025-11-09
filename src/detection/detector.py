@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Real-time Intrusion Detector
 Monitors traffic and detects attacks using the trained ML model.

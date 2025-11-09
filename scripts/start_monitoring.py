@@ -70,9 +70,9 @@ def main():
         email_sender = EmailSender()
         recommender = RecommendationEngine()
 
-        print("✓ IDS initialized successfully")
-        print(f"✓ Email alerts: {'Enabled' if email_sender.enabled else 'Disabled'}")
-        print(f"✓ Detection threshold: {detector.threshold}")
+        print("[OK] IDS initialized successfully")
+        print(f"[OK] Email alerts: {'Enabled' if email_sender.enabled else 'Disabled'}")
+        print(f"[OK] Detection threshold: {detector.threshold}")
         print("\nMonitoring for attacks... (Press Ctrl+C to stop)\n")
 
         # Start monitoring (simulated for now)
@@ -85,7 +85,7 @@ def main():
             if attack:
                 attack_count += 1
 
-                print(f"\n🚨 ATTACK DETECTED #{attack_count}")
+                print(f"\n[ALERT] ATTACK DETECTED #{attack_count}")
                 print(f"   Type: {attack['attack_type'].upper()}")
                 print(f"   Source: {attack['source_ip']}")
                 print(f"   Confidence: {attack['confidence']:.2f}")
@@ -96,20 +96,20 @@ def main():
 
                 # Send email alert
                 if Config.EMAIL_ENABLED and attack_count % Config.ALERT_THRESHOLD == 0:
-                    print(f"   📧 Sending email alert...")
+                    print(f"   [EMAIL] Sending email alert...")
                     email_sender.send_attack_alert(attack, recommendations)
 
     except KeyboardInterrupt:
-        print("\n\n✓ Monitoring stopped by user")
+        print("\n\n[OK] Monitoring stopped by user")
 
     except FileNotFoundError:
-        print("\n❌ Error: Trained model not found!")
+        print("\n[FAIL] Error: Trained model not found!")
         print("Please train the model first:")
         print("  python scripts/train_model.py")
         sys.exit(1)
 
     except Exception as e:
-        print(f"\n❌ Monitoring failed: {e}")
+        print(f"\n[FAIL] Monitoring failed: {e}")
         logging.error("Monitoring failed", exc_info=True)
         sys.exit(1)
 

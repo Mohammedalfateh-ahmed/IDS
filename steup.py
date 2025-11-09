@@ -21,9 +21,9 @@ class IDSSetup:
     def check_python_version(self):
         print("[1/10] Checking Python version...")
         if sys.version_info < (3, 8):
-            print("❌ Error: Python 3.8+ required")
+            print("[FAIL] Error: Python 3.8+ required")
             sys.exit(1)
-        print(f"✅ Python {sys.version.split()[0]} detected")
+        print(f"[SUCCESS] Python {sys.version.split()[0]} detected")
         
     def create_directories(self):
         print("\n[2/10] Creating directory structure...")
@@ -42,7 +42,7 @@ class IDSSetup:
         for directory in directories:
             Path(directory).mkdir(parents=True, exist_ok=True)
             
-        print(f"✅ Created {len(directories)} directories")
+        print(f"[SUCCESS] Created {len(directories)} directories")
         
     def create_init_files(self):
         print("\n[3/10] Creating Python package files...")
@@ -59,18 +59,18 @@ class IDSSetup:
             init_file = Path(location) / '__init__.py'
             init_file.touch(exist_ok=True)
             
-        print(f"✅ Created {len(init_locations)} __init__.py files")
+        print(f"[SUCCESS] Created {len(init_locations)} __init__.py files")
         
     def setup_virtual_environment(self):
         print("\n[4/10] Setting up virtual environment...")
         
         if not Path('venv').exists():
             subprocess.run([sys.executable, '-m', 'venv', 'venv'])
-            print("✅ Virtual environment created")
+            print("[SUCCESS] Virtual environment created")
         else:
-            print("✅ Virtual environment already exists")
+            print("[SUCCESS] Virtual environment already exists")
             
-        print("\n⚠️  Please activate the virtual environment:")
+        print("\n[WARNING]  Please activate the virtual environment:")
         if self.os_type == 'windows':
             print("   Run: venv\\Scripts\\activate")
         else:
@@ -91,14 +91,14 @@ class IDSSetup:
                     sys.executable, '-m', 'pip', 'install',
                     '-r', 'requirements.txt'
                 ], check=True)
-                print("✅ All dependencies installed")
+                print("[SUCCESS] All dependencies installed")
             else:
-                print("⚠️  requirements.txt not found")
+                print("[WARNING]  requirements.txt not found")
                 print("   Creating basic requirements.txt...")
                 self.create_requirements_file()
                 
         except subprocess.CalledProcessError as e:
-            print(f"❌ Error installing dependencies: {e}")
+            print(f"[FAIL] Error installing dependencies: {e}")
             
     def create_requirements_file(self):
         requirements = """xgboost==2.0.3
@@ -115,7 +115,7 @@ tqdm==4.66.1"""
         
         with open('requirements.txt', 'w') as f:
             f.write(requirements)
-        print("✅ requirements.txt created")
+        print("[SUCCESS] requirements.txt created")
         
     def download_dataset(self):
         print("\n[6/10] Downloading NSL-KDD dataset...")
@@ -135,12 +135,12 @@ tqdm==4.66.1"""
                     response = requests.get(url)
                     with open(filepath, 'wb') as f:
                         f.write(response.content)
-                    print(f"   ✅ {filename} downloaded")
+                    print(f"   [SUCCESS] {filename} downloaded")
                 else:
-                    print(f"   ✅ {filename} already exists")
+                    print(f"   [SUCCESS] {filename} already exists")
                     
         except Exception as e:
-            print(f"⚠️  Could not download dataset: {e}")
+            print(f"[WARNING]  Could not download dataset: {e}")
             print("   Please download manually from:")
             print("   https://www.unb.ca/cic/datasets/nsl.html")
             
@@ -164,10 +164,10 @@ DB_PATH=databases/ids_logs.db"""
             
             with open(env_path, 'w') as f:
                 f.write(env_content)
-            print("✅ .env file created")
-            print("   ⚠️  Please update .env with your email credentials")
+            print("[SUCCESS] .env file created")
+            print("   [WARNING]  Please update .env with your email credentials")
         else:
-            print("✅ .env file already exists")
+            print("[SUCCESS] .env file already exists")
             
     def create_gitignore(self):
         print("\n[8/10] Creating .gitignore...")
@@ -218,7 +218,7 @@ Thumbs.db
         
         with open('.gitignore', 'w') as f:
             f.write(gitignore_content)
-        print("✅ .gitignore created")
+        print("[SUCCESS] .gitignore created")
         
     def create_readme(self):
         print("\n[9/10] Creating README.md...")
@@ -282,7 +282,7 @@ MIT License - See LICENSE file for details
         
         with open('README.md', 'w') as f:
             f.write(readme_content)
-        print("✅ README.md created")
+        print("[SUCCESS] README.md created")
         
     def verify_setup(self):
         print("\n[10/10] Verifying setup...")
@@ -298,13 +298,13 @@ MIT License - See LICENSE file for details
         
         all_good = True
         for check, result in checks.items():
-            status = "✅" if result else "❌"
+            status = "[SUCCESS]" if result else "[FAIL]"
             print(f"   {status} {check}")
             if not result:
                 all_good = False
                 
         if all_good:
-            print("\n✅ Setup completed successfully!")
+            print("\n[SUCCESS] Setup completed successfully!")
             print("\n📋 Next Steps:")
             print("1. Activate virtual environment")
             print("2. Update config/.env with your settings")
@@ -312,7 +312,7 @@ MIT License - See LICENSE file for details
             print("4. Start monitoring: python scripts/start_monitoring.py")
             print("5. Launch dashboard: streamlit run src/dashboard/app.py")
         else:
-            print("\n⚠️  Some components are missing. Please check and retry.")
+            print("\n[WARNING]  Some components are missing. Please check and retry.")
             
     def run(self):
         self.print_banner()

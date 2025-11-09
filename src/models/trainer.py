@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 XGBoost Model Trainer for AI-Powered IDS
 Trains the machine learning model for intrusion detection.

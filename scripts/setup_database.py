@@ -31,7 +31,7 @@ def main():
         print("Creating database schema...")
         schema = initialize_database()
 
-        print("\n✅ Database initialized successfully!")
+        print("\n[SUCCESS] Database initialized successfully!")
 
         # Display table info
         table_info = schema.get_table_info()
@@ -41,15 +41,15 @@ def main():
 
         for table_name, info in table_info.items():
             if not table_name.startswith('sqlite_'):
-                print(f"\n  📊 {table_name}")
+                print(f"\n  [INFO] {table_name}")
                 print(f"     Columns: {info['columns'][:5]}..." if len(info['columns']) > 5 else f"     Columns: {info['columns']}")
                 print(f"     Rows: {info['row_count']}")
 
         print("\n" + "=" * 60)
-        print("✓ Database is ready for use!")
+        print("[OK] Database is ready for use!")
 
     except Exception as e:
-        print(f"\n❌ Database setup failed: {e}")
+        print(f"\n[FAIL] Database setup failed: {e}")
         logging.error("Database setup failed", exc_info=True)
         sys.exit(1)
 

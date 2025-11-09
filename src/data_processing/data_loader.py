@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Data Loader for AI-Powered IDS
 Loads and prepares datasets (NSL-KDD, CIC-IDS, CSIC) for training and testing.

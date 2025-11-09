@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Email Alert Sender
 Sends email notifications when attacks are detected.
@@ -45,7 +46,7 @@ class EmailSender:
             return False
 
         try:
-            subject = f"🚨 SECURITY ALERT: {attack_data['attack_type'].upper()} Attack Detected"
+            subject = f"[ALERT] SECURITY ALERT: {attack_data['attack_type'].upper()} Attack Detected"
 
             body = self._format_attack_email(attack_data, recommendations)
 

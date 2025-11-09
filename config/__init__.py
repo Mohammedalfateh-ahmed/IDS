@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Configuration module for AI-Powered IDS
 """
@@ -110,6 +111,6 @@ class Config:
 # Validate configuration on import
 config_errors = Config.validate()
 if config_errors:
-    print("⚠️  Configuration warnings:")
+    print("[WARNING]  Configuration warnings:")
     for error in config_errors:
         print(f"   - {error}")
