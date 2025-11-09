@@ -1,15 +1,381 @@
+# =============================================================================
+# AI-Powered IDS - Main Configuration File
+# =============================================================================
+
+# Model Configuration
 model:
-  path: models/xgboost_ids.pkl
-  preprocessor_path: models/preprocessor.pkl
-  
+  name: "XGBoost IDS Classifier"
+  type: "xgboost"
+  version: "1.0.0"
+
+  # XGBoost hyperparameters
+  params:
+    objective: "multi:softprob"
+    eval_metric: "mlogloss"
+    num_class: 5  # normal, DoS, Probe, R2L, U2R
+    max_depth: 8
+    learning_rate: 0.1
+    n_estimators: 200
+    subsample: 0.8
+    colsample_bytree: 0.8
+    min_child_weight: 1
+    gamma: 0.1
+    reg_alpha: 0.1
+    reg_lambda: 1.0
+    random_state: 42
+    n_jobs: -1
+
+  # Training configuration
+  training:
+    test_size: 0.2
+    validation_split: 0.1
+    stratify: true
+    cross_validation: 5
+    early_stopping_rounds: 20
+    verbose: true
+
+# Feature Engineering
+features:
+  # Network-level features
+  network:
+    - duration
+    - protocol_type
+    - service
+    - flag
+    - src_bytes
+    - dst_bytes
+    - land
+    - wrong_fragment
+    - urgent
+
+  # Traffic features
+  traffic:
+    - count
+    - srv_count
+    - serror_rate
+    - srv_serror_rate
+    - rerror_rate
+    - srv_rerror_rate
+    - same_srv_rate
+    - diff_srv_rate
+    - srv_diff_host_rate
+
+  # Connection features
+  connection:
+    - dst_host_count
+    - dst_host_srv_count
+    - dst_host_same_srv_rate
+    - dst_host_diff_srv_rate
+    - dst_host_same_src_port_rate
+    - dst_host_srv_diff_host_rate
+    - dst_host_serror_rate
+    - dst_host_srv_serror_rate
+    - dst_host_rerror_rate
+    - dst_host_srv_rerror_rate
+
+  # HTTP-specific features (for web attacks)
+  http:
+    - method
+    - path
+    - query_length
+    - param_count
+    - special_char_ratio
+    - percent_encoding_ratio
+    - entropy
+    - body_length
+    - user_agent_category
+    - status_code
+    - response_time
+
+  # Categorical columns to encode
+  categorical:
+    - protocol_type
+    - service
+    - flag
+    - method
+    - user_agent_category
+
+  # Numerical columns to scale
+  numerical:
+    - duration
+    - src_bytes
+    - dst_bytes
+    - count
+    - srv_count
+
+# Attack Classes
+attack_classes:
+  normal: 0
+  dos: 1
+  probe: 2
+  r2l: 3
+  u2r: 4
+
+  # Specific attack types mapping
+  mapping:
+    # DoS attacks
+    back: dos
+    land: dos
+    neptune: dos
+    pod: dos
+    smurf: dos
+    teardrop: dos
+    apache2: dos
+    udpstorm: dos
+    processtable: dos
+    mailbomb: dos
+
+    # Probe attacks
+    ipsweep: probe
+    nmap: probe
+    portsweep: probe
+    satan: probe
+    mscan: probe
+    saint: probe
+
+    # R2L (Remote to Local) attacks
+    ftp_write: r2l
+    guess_passwd: r2l
+    imap: r2l
+    multihop: r2l
+    phf: r2l
+    spy: r2l
+    warezclient: r2l
+    warezmaster: r2l
+    sendmail: r2l
+    named: r2l
+    snmpgetattack: r2l
+    snmpguess: r2l
+    xlock: r2l
+    xsnoop: r2l
+    httptunnel: r2l
+
+    # U2R (User to Root) attacks
+    buffer_overflow: u2r
+    loadmodule: u2r
+    perl: u2r
+    rootkit: u2r
+    sqlattack: u2r
+    xterm: u2r
+    ps: u2r
+
+    # Web attacks
+    sqli: r2l
+    xss: r2l
+    command_injection: r2l
+    path_traversal: r2l
+
+# Detection Configuration
 detection:
-  confidence_threshold: 0.70
+  threshold: 0.7
   batch_size: 100
-  
-alerts:
+  max_queue_size: 1000
+
+  # Per-attack-type thresholds
+  thresholds:
+    dos: 0.8
+    probe: 0.7
+    r2l: 0.75
+    u2r: 0.85
+
+# Threat Intelligence
+intelligence:
+  # IP enrichment
+  ip_enrichment:
+    enabled: true
+    cache_ttl: 3600  # 1 hour
+    timeout: 5  # seconds
+
+  # VPN/Proxy detection
+  vpn_detection:
+    enabled: true
+    indicators:
+      - datacenter_asn
+      - cloud_provider
+      - known_vpn_org
+      - high_port_diversity
+
+  # Threat scoring
+  threat_scoring:
+    weights:
+      attack_confidence: 0.3
+      attack_frequency: 0.25
+      attack_severity: 0.25
+      vpn_probability: 0.1
+      ip_reputation: 0.1
+
+# Alerting Configuration
+alerting:
+  email:
+    enabled: true
+    rate_limit: 10  # max emails per hour
+    batch_alerts: true
+    batch_interval: 300  # 5 minutes
+
+  alert_levels:
+    critical: ["u2r", "dos"]
+    high: ["r2l"]
+    medium: ["probe"]
+    low: []
+
+  # Alert content
+  include_in_alert:
+    - attack_type
+    - confidence
+    - source_ip
+    - destination_ip
+    - destination_port
+    - timestamp
+    - geolocation
+    - vpn_probability
+    - recommendations
+
+# Recommendations Configuration
+recommendations:
   enabled: true
-  cooldown_minutes: 15
-  
+
+  # Port management rules
+  port_rules:
+    # Close unused high-risk ports
+    close_if_unused: [21, 23, 25, 135, 139, 445, 1433, 3306, 3389]
+
+    # Always recommend hardening
+    always_harden: [22, 80, 443, 8080]
+
+    # Minimum attack threshold for port closure recommendation
+    min_attacks_for_closure: 10
+
+  # Firewall rules
+  firewall_rules:
+    enable_rate_limiting: true
+    enable_ip_blocking: true
+    block_duration: 3600  # 1 hour
+
+  # WAF rules
+  waf_rules:
+    enable_sqli_protection: true
+    enable_xss_protection: true
+    enable_path_traversal_protection: true
+
+# Security Configuration
+security:
+  safe_mode: true  # Prevents actual system changes
+  require_confirmation: true
+  log_all_actions: true
+
+  # Port operations
+  port_operations:
+    enabled: false  # Disabled by default for safety
+    require_sudo: true
+    dry_run: true
+
+  # IP blocking
+  ip_blocking:
+    enabled: false  # Disabled by default
+    max_block_duration: 86400  # 24 hours
+    whitelist_check: true
+
+# Database Configuration
+database:
+  path: "./data/ids_database.db"
+
+  # Retention policy
+  retention:
+    max_age_days: 90
+    auto_cleanup: true
+
+  # Indexing
+  indexes:
+    - source_ip
+    - attack_type
+    - timestamp
+    - confidence
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  handlers:
+    console:
+      enabled: true
+      level: "INFO"
+
+    file:
+      enabled: true
+      level: "DEBUG"
+      path: "./logs/ids.log"
+      max_bytes: 10485760  # 10MB
+      backup_count: 5
+
+    database:
+      enabled: true
+      level: "WARNING"
+
+# Dashboard Configuration
 dashboard:
-  refresh_interval: 5
-  max_rows: 1000
+  title: "AI-Powered IDS Dashboard"
+  refresh_interval: 5  # seconds
+
+  # Display settings
+  display:
+    max_recent_attacks: 100
+    max_top_attackers: 20
+    time_range_options: [1, 6, 12, 24, 168]  # hours
+
+  # Charts and visualizations
+  charts:
+    attack_timeline: true
+    geographic_map: true
+    attack_distribution: true
+    top_attackers: true
+    top_targets: true
+    confidence_distribution: true
+
+# Dataset Configuration
+datasets:
+  nsl_kdd:
+    column_names:
+      - duration
+      - protocol_type
+      - service
+      - flag
+      - src_bytes
+      - dst_bytes
+      - land
+      - wrong_fragment
+      - urgent
+      - hot
+      - num_failed_logins
+      - logged_in
+      - num_compromised
+      - root_shell
+      - su_attempted
+      - num_root
+      - num_file_creations
+      - num_shells
+      - num_access_files
+      - num_outbound_cmds
+      - is_host_login
+      - is_guest_login
+      - count
+      - srv_count
+      - serror_rate
+      - srv_serror_rate
+      - rerror_rate
+      - srv_rerror_rate
+      - same_srv_rate
+      - diff_srv_rate
+      - srv_diff_host_rate
+      - dst_host_count
+      - dst_host_srv_count
+      - dst_host_same_srv_rate
+      - dst_host_diff_srv_rate
+      - dst_host_same_src_port_rate
+      - dst_host_srv_diff_host_rate
+      - dst_host_serror_rate
+      - dst_host_srv_serror_rate
+      - dst_host_rerror_rate
+      - dst_host_srv_rerror_rate
+      - label
+      - difficulty
